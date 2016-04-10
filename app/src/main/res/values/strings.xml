@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Mp3Player</string>
+    <string name="mp3list.update">更新列表</string>
+    <string name="mp3list.about">关于</string>
+</resources>
