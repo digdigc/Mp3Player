@@ -20,6 +20,7 @@ public class Mp3Info implements Serializable{
     public static final int PLAY = 1;
     public static final int PAUSE = 2;
     public static final int STOP = 3;
+    
 
     private String id;
     private String mp3Name;
