@@ -1,6 +1,5 @@
 package cuiz.mp3player;
 
-import android.app.Activity;
 import android.app.TabActivity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -24,7 +23,7 @@ public class MainActivity extends TabActivity {
         //设置该页的Indicator
         remoteTabSpec.setIndicator("remote",getResources().getDrawable(android.R.drawable.arrow_down_float));
         //设置该页的内容
-        remoteTabSpec.setContent(new Intent().setClass(this,Mp3ListActivity.class));
+        remoteTabSpec.setContent(new Intent().setClass(this,OnlineListActivity.class));
         //将设置好的TabSpec对象添加到Tabhost中
         tabHost.addTab(remoteTabSpec);
 
@@ -34,4 +33,5 @@ public class MainActivity extends TabActivity {
         tabHost.addTab(localTabSpec);
 
     }
+
 }

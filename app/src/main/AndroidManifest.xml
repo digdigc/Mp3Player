@@ -21,7 +21,8 @@
      App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information. -->
 
         <activity android:name=".LocalMp3LIstActivity"></activity>
-        <activity android:name=".Mp3ListActivity"></activity>
+        <activity android:name=".OnlineListActivity"></activity>
+        <activity android:name=".PlayerActivity"></activity>
 
         <meta-data
             android:name="com.google.android.gms.version"

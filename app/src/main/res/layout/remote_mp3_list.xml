@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="@dimen/activity_vertical_margin"
-    tools:context=".Mp3ListActivity">
+    tools:context=".OnlineListActivity">
 
 
 
@@ -16,10 +16,6 @@
         android:drawSelectorOnTop="true"
         android:scrollbars="vertical" />
 
-    <SeekBar android:id="@+id/seekBar_id"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        style="?android:attr/seekBarStyle" />
+
 
 </LinearLayout>

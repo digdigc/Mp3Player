@@ -16,11 +16,7 @@ import cuiz.mp3player.R;
  * Created by cuiz on 2016/4/6.
  */
 public class Mp3Info implements Serializable{
-    /**播放命令*/
-    public static final int PLAY = 1;
-    public static final int PAUSE = 2;
-    public static final int STOP = 3;
-    
+
 
     private String id;
     private String mp3Name;

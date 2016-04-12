@@ -1,5 +1,6 @@
 package cuiz.mp3player;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -8,8 +9,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -35,37 +34,28 @@ import javax.xml.parsers.SAXParserFactory;
 import cuiz.Downloader.HttpDownloader;
 import cuiz.model.MyAdapter;
 import cuiz.mp3player.Mp3PlayService.DownloadService;
-import cuiz.mp3player.Mp3PlayService.PlayService;
 import cuiz.model.Mp3Info;
 import cuiz.xml.Mp3ListContentHandler;
 
+//1：网络mp3列表显示
+//2：并通过启动下载服务将---mp3文件下载到本地
 
-public class Mp3ListActivity extends AppCompatActivity {
+
+public class OnlineListActivity extends Activity {
     //普通变量
-
-    public static final String KEY_DOWN = "DOWNLOAD";
-
     /**线程间通信，异步信息*/
     public static final int DOWN_PARSE_XML_OK = 0;
-    public static final int DOWN_MP3 = 1; 
-
-    /**菜单点击item序号*/
-    private static final int update = 1;
-    private static final int about = 2;
+    public static final int DOWN_MP3 = 1;
 
     /**线程间通信处理器*/
     public static Handler myHandler = null;
 
     /**由xml文件生成的Mp3文件的信息*/
-    public static List<Mp3Info> mp3Infos = null;
-    /**用户点击选择的位置*/
-    public static int clickPosition = 0;
-    public static String currentSelectedMp3Name = null;
+    private List<Mp3Info> mp3Infos = null;
 
     //UI控件
     /**UI容器，每个item装载一个Mp3文件的信息（name size）*/
     private ListView listView = null;
-    public static SeekBar seekBar = null;
 
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.
@@ -78,7 +68,7 @@ public class Mp3ListActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.remote_mp3_list);
         listView = (ListView)findViewById(R.id.mp3info_list);
-        seekBar = (SeekBar) findViewById(R.id.seekBar_id);
+
         /***异步事件处理
          * DOWN_PARSE_XML_OK  :XML文件下载并解析完成，在此完成UI列表更新，并通知用户;
          * DOWN_MP3           :MP3文件下载结果，在此通知用户.
@@ -90,7 +80,7 @@ public class Mp3ListActivity extends AppCompatActivity {
                 if ((msg.what == DOWN_PARSE_XML_OK)) {
                     //UI列表更新--Mp3信息
                     showMp3InfoView();
-                    Toast.makeText(Mp3ListActivity.this, "更新完成", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(OnlineListActivity.this, "更新完成", Toast.LENGTH_SHORT).show();
                 }else if(msg.what == DOWN_MP3){
                     //提示用户--MP3文件下载情况
                     Toast.makeText(getApplicationContext(),(String)msg.obj,Toast.LENGTH_SHORT).show();
@@ -99,44 +89,46 @@ public class Mp3ListActivity extends AppCompatActivity {
             }
         };
 
-        /**下载resource.xml(含mp3信息),并解析，生成Mp3对象放入Mp3InfoList
-         * */
-        updateMp3InfoFrowXML();
+
 
         /**click，播放指定的mp3文件
          * */
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      /*  listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Mp3ListActivity.clickPosition = position;
-                Mp3ListActivity.currentSelectedMp3Name = mp3Infos.get(position).getMp3Name();
+                clickPosition = position;
+                currentSelectedMp3Name = mp3Infos.get(position).getMp3Name();
                 playMp3Start(Mp3Info.PLAY);
             }
         });
-
+*/
         /**长按--下载mp3文件
          * */
        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                Mp3ListActivity.clickPosition = position;
-                Mp3ListActivity.currentSelectedMp3Name = mp3Infos.get(position).getMp3Name();
 
-                AlertDialog.Builder dialog = new AlertDialog.Builder(Mp3ListActivity.this);
+                final Mp3Info mp3Info  = mp3Infos.get(position);
+
+                AlertDialog.Builder dialog = new AlertDialog.Builder(OnlineListActivity.this);
                 dialog.setTitle("是否下载");
-                dialog.setMessage("Something important.");
+                dialog.setMessage(mp3Info.getMp3Name()+"\n"+mp3Info.getLrcName());
                 dialog.setCancelable(false);
                 dialog.setPositiveButton("下载", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        Toast.makeText(Mp3ListActivity.this,"正在下载",Toast.LENGTH_SHORT).show();
-                        downMp3Start();
+                        Toast.makeText(OnlineListActivity.this,"正在下载",Toast.LENGTH_SHORT).show();
+
+                        Intent intent = new Intent();
+                        intent.putExtra("MP3_INFO",mp3Info);
+                        intent.setClass(OnlineListActivity.this, DownloadService.class);
+                        startService(intent);
                     }
                 });
                 dialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        Toast.makeText(Mp3ListActivity.this,"已取消下载",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(OnlineListActivity.this,"已取消下载",Toast.LENGTH_SHORT).show();
 
                     }
                 });
@@ -149,28 +141,19 @@ public class Mp3ListActivity extends AppCompatActivity {
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
-    private void playMp3Start(int action) {
-        Intent intent = new Intent();
-        intent.putExtra("COMMAND",action);//KEY,VALUE；
-        intent.putExtra("MP3_NAME",currentSelectedMp3Name);
-        //附： Mp3Info实现序列化接口，可以把这个对象从内存当中变成字节码放到硬盘里面，或者通过网络发送出去。
-        intent.setClass(Mp3ListActivity.this, PlayService.class);
-        startService(intent);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        /**下载resource.xml(含mp3信息),并解析，生成Mp3对象放入Mp3InfoList
+         * */
+        updateMp3InfoFrowXML();
     }
-
-    public void downMp3Start() {
-        //在Service中下载Mp3文件
-        Intent intent = new Intent();
-        intent.setClass(Mp3ListActivity.this, DownloadService.class);
-        startService(intent);
-    }
-
 
 
     /**XML文件下载、读取、解析---新建线程进行网络下载及耗时的非UI操作
      * */
     private void updateMp3InfoFrowXML(){
-        Toast.makeText(Mp3ListActivity.this, "正在更新", Toast.LENGTH_SHORT).show();
+        Toast.makeText(OnlineListActivity.this, "正在更新", Toast.LENGTH_SHORT).show();
         new Thread(){
             @Override
             public void run() {
@@ -236,7 +219,7 @@ public class Mp3ListActivity extends AppCompatActivity {
             mp3InfoViewlist.add(item);
         }
         //创建一个MyAdapter对象
-        MyAdapter myAdapter = new MyAdapter(Mp3ListActivity.this,
+        MyAdapter myAdapter = new MyAdapter(OnlineListActivity.this,
                 mp3InfoViewlist,
                 R.layout.mp3info_item,
                 new String[]{"MP3.NAME","MP3.SIZE"},
@@ -245,14 +228,14 @@ public class Mp3ListActivity extends AppCompatActivity {
     }
 
     //--------------------------------------------------------------
-    @Override
+   /* @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         System.out.println("item'id is--> " + item.getItemId());
 
         switch (item.getItemId()) {
             //用户点击了更新
             case update:
-                updateMp3InfoFrowXML();
+
                 break;
             case about:
 
@@ -270,48 +253,10 @@ public class Mp3ListActivity extends AppCompatActivity {
         menu.add(0, 1, 1, R.string.mp3list_update);
         menu.add(0, 2, 2, R.string.mp3list_about);
         return super.onCreateOptionsMenu(menu);
-    }
+    }*/
 
     //----------------------------------------------------------
-    @Override
-    public void onStart() {
-        super.onStart();
 
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.connect();
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app URL is correct.
-                Uri.parse("android-app://cuiz.mp3player/http/host/path")
-        );
-        AppIndex.AppIndexApi.start(client, viewAction);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app URL is correct.
-                Uri.parse("android-app://cuiz.mp3player/http/host/path")
-        );
-        AppIndex.AppIndexApi.end(client, viewAction);
-        client.disconnect();
-    }
 
 }
 
